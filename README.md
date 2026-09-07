@@ -40,6 +40,10 @@ colour until they are recreated.
 
 To pin a release: `herdr plugin install FerreTorresJosep/herdr-plugin-space-colors --ref v0.2.0`.
 For local development, clone and `herdr plugin link ./herdr-plugin-space-colors`.
+Herdr picks up manifest *action* changes to a linked plugin immediately, but
+registers *event* subscriptions at link time — after editing `[[events]]`, run
+`herdr plugin unlink ferretorres.space-colors` and link again, or the new hooks
+never fire.
 
 ## How it works
 
