@@ -36,6 +36,16 @@ const THEME_TOKENS: &[&str] = &[
     "text", "subtext0", "mauve", "green", "yellow", "red", "blue", "teal", "peach",
 ];
 
+/// stdout writers that ignore a closed pipe (`status | head`) instead of
+/// panicking the way `println!` does on EPIPE.
+macro_rules! outln {
+    () => {{ use std::io::Write as _; let _ = writeln!(std::io::stdout().lock()); }};
+    ($($arg:tt)*) => {{ use std::io::Write as _; let _ = writeln!(std::io::stdout().lock(), $($arg)*); }};
+}
+macro_rules! out {
+    ($($arg:tt)*) => {{ use std::io::Write as _; let _ = write!(std::io::stdout().lock(), $($arg)*); }};
+}
+
 type Res<T> = Result<T, String>;
 type Palette = BTreeMap<String, String>;
 
@@ -49,7 +59,7 @@ fn main() -> ExitCode {
         "clear" => cmd_clear(dry_run),
         "status" => cmd_status(),
         "validate" => cmd_validate(),
-        "help" | "-h" => { print!("{}", usage()); Ok(()) }
+        "help" | "-h" => { out!("{}", usage()); Ok(()) }
         other => Err(format!("unknown command `{other}`\n\n{}", usage())),
     };
 
@@ -516,12 +526,12 @@ fn tidy_theme(doc: &mut DocumentMut) {
 
 fn commit(ctx: &Ctx, path: &Path, original: &str, updated: &str, dry_run: bool, what: &str) -> Res<bool> {
     if updated == original {
-        println!("[{TAG}] {what}: already in place, nothing to do");
+        outln!("[{TAG}] {what}: already in place, nothing to do");
         return Ok(false);
     }
     if dry_run {
-        println!("[{TAG}] {what}: dry run, would change {}:", path.display());
-        print!("{}", diff(original, updated));
+        outln!("[{TAG}] {what}: dry run, would change {}:", path.display());
+        out!("{}", diff(original, updated));
         return Ok(false);
     }
 
@@ -534,7 +544,7 @@ fn commit(ctx: &Ctx, path: &Path, original: &str, updated: &str, dry_run: bool, 
     }
     herdr_run(ctx, &["server", "reload-config"])
         .map_err(|e| format!("{what}: config written and valid, but the reload failed (is the server running?)\n{e}"))?;
-    println!("[{TAG}] {what}: applied");
+    outln!("[{TAG}] {what}: applied");
     Ok(true)
 }
 
@@ -592,7 +602,7 @@ fn cmd_apply(dry_run: bool) -> Res<()> {
         && st.last_workspace.as_deref() == Some(&ws.id)
         && st.last_palette.as_deref() == palette_name
     {
-        println!("[{TAG}] {} ({}): unchanged", ws.label, palette_name.unwrap_or("none"));
+        outln!("[{TAG}] {} ({}): unchanged", ws.label, palette_name.unwrap_or("none"));
         return Ok(());
     }
 
@@ -646,18 +656,18 @@ fn cmd_status() -> Res<()> {
     let cfg = load_plugin_config(&ctx)?;
     let st = load_state(&ctx);
 
-    println!("herdr config: {}", herdr_config_path(&cfg).display());
-    println!("state:        {}", state_path(&ctx).display());
-    println!("managed keys: {}", if st.managed.is_empty() { "none".into() } else { st.managed.join(", ") });
-    println!();
-    println!("{:<4} {:<3} {:<18} {:<10} {:<14} CWD", "ID", "", "LABEL", "PALETTE", "VIA");
+    outln!("herdr config: {}", herdr_config_path(&cfg).display());
+    outln!("state:        {}", state_path(&ctx).display());
+    outln!("managed keys: {}", if st.managed.is_empty() { "none".into() } else { st.managed.join(", ") });
+    outln!();
+    outln!("{:<4} {:<3} {:<18} {:<10} {:<14} CWD", "ID", "", "LABEL", "PALETTE", "VIA");
     for ws in all_workspaces(&ctx)? {
         let (palette, via) = match choose_palette(&cfg, &ws) {
             Pick::Explicit(n) => (n, "explicit"),
             Pick::Auto(n) => (n, "auto"),
             Pick::None => ("-", "none"),
         };
-        println!(
+        outln!(
             "{:<4} {:<3} {:<18} {:<10} {:<14} {}",
             ws.id,
             if ws.focused { "*" } else { "" },
@@ -673,15 +683,15 @@ fn cmd_status() -> Res<()> {
 fn cmd_validate() -> Res<()> {
     let ctx = ctx();
     let cfg = load_plugin_config(&ctx)?;
-    println!("config: {}", ctx.config_dir.join("config.toml").display());
-    println!("herdr config: {}", herdr_config_path(&cfg).display());
-    println!("auto: {}", cfg.auto);
-    println!("palettes ({}):", cfg.palettes.len());
+    outln!("config: {}", ctx.config_dir.join("config.toml").display());
+    outln!("herdr config: {}", herdr_config_path(&cfg).display());
+    outln!("auto: {}", cfg.auto);
+    outln!("palettes ({}):", cfg.palettes.len());
     for (name, p) in &cfg.palettes {
         let pairs: Vec<String> = p.iter().map(|(k, v)| format!("{k}={v}")).collect();
-        println!("  {name}: {}", pairs.join(" "));
+        outln!("  {name}: {}", pairs.join(" "));
     }
-    println!("rules ({}):", cfg.rules.len());
+    outln!("rules ({}):", cfg.rules.len());
     for r in &cfg.rules {
         let what = match (&r.label, &r.path) {
             (Some(l), Some(p)) => format!("label {l:?} or path {p}"),
@@ -689,9 +699,9 @@ fn cmd_validate() -> Res<()> {
             (None, Some(p)) => format!("path {p}"),
             (None, None) => "(invalid)".into(),
         };
-        println!("  {what} → {}", r.palette);
+        outln!("  {what} → {}", r.palette);
     }
-    println!("config is valid.");
+    outln!("config is valid.");
     Ok(())
 }
 
