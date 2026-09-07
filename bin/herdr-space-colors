@@ -1,0 +1,42 @@
+#!/bin/sh
+# Shim entrypoint. Builds the Rust binary on first use (and again whenever
+# Cargo.toml or src/ is newer than the binary, e.g. after `git pull`), then
+# execs it with the original arguments. Herdr invokes this as
+# `sh bin/herdr-space-colors <command>` with the plugin root as cwd. GitHub
+# installs also run the manifest's [[build]] step, so the first event never
+# waits on a compile there; `herdr plugin link` relies on this self-build.
+set -eu
+
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case "$link" in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+
+root=$(cd "$(dirname "$self")/.." && pwd)
+bin="$root/target/release/herdr-space-colors"
+
+# Hot path: workspace.focused fires on every workspace switch. Skip the
+# rebuild check (a find over src/) so a switch costs one exec, not a sweep.
+if [ "${HERDR_PLUGIN_EVENT:-}" = "workspace.focused" ] && [ -x "$bin" ]; then
+  exec "$bin" "$@"
+fi
+
+needs_build() {
+  [ ! -x "$bin" ] && return 0
+  [ -n "$(find "$root/Cargo.toml" "$root/src" -newer "$bin" 2>/dev/null | head -n 1)" ]
+}
+
+if needs_build; then
+  if ! command -v cargo >/dev/null 2>&1; then
+    echo "[space-colors] cargo not found — install Rust (https://rustup.rs) so the plugin can build itself" >&2
+    exit 1
+  fi
+  echo "[space-colors] building the plugin binary (one-off after install/update)..." >&2
+  cargo build --release --quiet --manifest-path "$root/Cargo.toml" >&2
+fi
+
+exec "$bin" "$@"

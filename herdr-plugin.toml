@@ -1,0 +1,39 @@
+id = "ferretorres.space-colors"
+name = "Space Colors"
+version = "0.1.0"
+min_herdr_version = "0.8.2"
+description = "Peacock-style per-workspace colours: the Herdr theme follows the focused workspace."
+platforms = ["macos", "linux"]
+
+# Compile once at install time so the first workspace switch is instant. The
+# bin/ shim also self-builds, which is what `herdr plugin link` relies on.
+[[build]]
+command = ["cargo", "build", "--release", "--quiet"]
+
+# Re-apply the focused workspace's palette after the server restores its
+# session, so the colour is right before the first switch.
+[[startup]]
+command = ["sh", "bin/herdr-space-colors", "apply"]
+
+# The whole mechanism: on focus, rewrite the managed theme.custom keys and
+# reload. Herdr applies the theme section live on reload-config.
+[[events]]
+on = "workspace.focused"
+command = ["sh", "bin/herdr-space-colors", "apply"]
+
+[[actions]]
+id = "apply"
+title = "Apply space colour"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "apply"]
+
+[[actions]]
+id = "clear"
+title = "Clear space colours (restore base theme)"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "clear"]
+
+[[actions]]
+id = "status"
+title = "Show space colour assignments"
+command = ["sh", "bin/herdr-space-colors", "status"]

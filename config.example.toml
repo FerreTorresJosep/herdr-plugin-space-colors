@@ -1,0 +1,76 @@
+# herdr-space-colors — plugin configuration
+#
+# The Herdr theme follows the focused workspace. Each palette below is a set of
+# `theme.custom` tokens; whichever workspace is focused gets its palette written
+# into herdr's config.toml and the server reloads it live.
+#
+# Only the tokens named in a palette are ever written, and only those are
+# removed again on `clear` or when a workspace has no palette. Every other line
+# of your herdr config.toml is left exactly as it is.
+
+# Colour workspaces that match no rule below by hashing their directory onto
+# the palettes. Same project → same colour, on every machine, with no setup.
+auto = true
+
+# Path to herdr's config.toml. Normally not needed; the default is
+# ~/.config/herdr/config.toml, and $HERDR_CONFIG_PATH always wins.
+# herdr_config = "~/.config/herdr/config.toml"
+
+# Explicit assignments — take precedence over `auto`. Match a workspace by its
+# exact `label`, or by `path` (a directory prefix, so every worktree of a
+# project shares its colour; the longest matching path wins).
+#
+# [[workspaces]]
+# path = "~/projects/api"
+# palette = "blue"
+#
+# [[workspaces]]
+# label = "Website"
+# palette = "green"
+
+# Palettes. Keys must be theme.custom tokens; values must be #rgb or #rrggbb.
+# These are tuned for the default catppuccin theme: a vivid accent plus two
+# tinted surfaces so the sidebar and the active row shift with the workspace.
+# Allowed tokens: accent, panel_bg, sidebar_bg, active_row_bg, selection_bg,
+# surface0, surface1, surface_dim, overlay0, overlay1, text, subtext0,
+# mauve, green, yellow, red, blue, teal, peach.
+
+[palettes.red]
+accent = "#f38ba8"
+sidebar_bg = "#2e1f26"
+active_row_bg = "#3f2832"
+
+[palettes.peach]
+accent = "#fab387"
+sidebar_bg = "#2c2420"
+active_row_bg = "#3d3028"
+
+[palettes.yellow]
+accent = "#f9e2af"
+sidebar_bg = "#2c2a20"
+active_row_bg = "#3c3828"
+
+[palettes.green]
+accent = "#a6e3a1"
+sidebar_bg = "#202a22"
+active_row_bg = "#2a3a2c"
+
+[palettes.teal]
+accent = "#94e2d5"
+sidebar_bg = "#1f2a2a"
+active_row_bg = "#283a38"
+
+[palettes.blue]
+accent = "#89b4fa"
+sidebar_bg = "#1f2535"
+active_row_bg = "#283248"
+
+[palettes.mauve]
+accent = "#cba6f7"
+sidebar_bg = "#282334"
+active_row_bg = "#362e48"
+
+[palettes.pink]
+accent = "#f5c2e7"
+sidebar_bg = "#2d2230"
+active_row_bg = "#3d2e40"

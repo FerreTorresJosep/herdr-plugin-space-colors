@@ -1,0 +1,20 @@
+[package]
+name = "herdr-space-colors"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Peacock-style per-workspace colours for Herdr: the theme follows the focused workspace."
+license = "MIT"
+repository = "https://github.com/FerreTorresJosep/herdr-plugin-space-colors"
+publish = false
+
+[[bin]]
+name = "herdr-space-colors"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"
+toml_edit = "0.25"
+
+[profile.release]
+strip = true
