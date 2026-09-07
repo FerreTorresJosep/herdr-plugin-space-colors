@@ -1,6 +1,6 @@
 id = "ferretorres.space-colors"
 name = "Space Colors"
-version = "0.3.0"
+version = "0.3.1"
 min_herdr_version = "0.8.2"
 description = "Peacock-style per-workspace colours: theme, sidebar rows, panes and the terminal window follow each workspace."
 platforms = ["macos", "linux"]

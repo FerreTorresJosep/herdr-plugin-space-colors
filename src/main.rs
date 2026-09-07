@@ -602,6 +602,7 @@ fn load_state(ctx: &Ctx) -> State {
         window: window::WindowState {
             original: str_map(&v["window_original"]),
             current: str_map(&v["window_current"]),
+            session: str_map(&v["window_session"]),
         },
     }
 }
@@ -618,6 +619,7 @@ fn save_state(ctx: &Ctx, st: &State) -> Res<()> {
         "last_palette": st.last_palette,
         "window_original": st.window.original,
         "window_current": st.window.current,
+        "window_session": st.window.session,
     });
     fs::write(state_path(ctx), serde_json::to_string_pretty(&v).unwrap())
         .map_err(|e| format!("write state: {e}"))

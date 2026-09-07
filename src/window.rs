@@ -20,6 +20,39 @@ pub struct WindowState {
     pub original: BTreeMap<String, String>,
     /// tty → hex colour currently applied by this plugin.
     pub current: BTreeMap<String, String>,
+    /// tty → herdr session name that owns the client on it. Several sessions
+    /// share one state file, and each may only touch its own windows.
+    pub session: BTreeMap<String, String>,
+}
+
+/// Session name a plugin command runs under; herdr injects `HERDR_SESSION`
+/// into everything the server spawns.
+pub fn current_session() -> String {
+    std::env::var("HERDR_SESSION").unwrap_or_else(|_| "default".to_owned())
+}
+
+/// Session a herdr client was started for, from its command line:
+/// `herdr --session demo`, `herdr --session=demo`, `herdr session attach demo`,
+/// anything else is the default session.
+fn client_session(args: &[&str]) -> String {
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if *a == "--session" {
+            if let Some(n) = it.next() {
+                return (*n).to_owned();
+            }
+        } else if let Some(n) = a.strip_prefix("--session=") {
+            return n.to_owned();
+        } else if *a == "session" {
+            let mut rest = it.clone();
+            if rest.next() == Some(&"attach") {
+                if let Some(n) = rest.next() {
+                    return (*n).to_owned();
+                }
+            }
+        }
+    }
+    "default".to_owned()
 }
 
 /// `ps -axo tty=,command=` output, or None when ps is unavailable.
@@ -33,9 +66,9 @@ pub fn read_ps() -> Option<String> {
         .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
-/// Terminal devices with an attached herdr client (not the server, which has
-/// no controlling terminal).
-pub fn client_ttys(ps: &str) -> Vec<String> {
+/// Terminal devices with an attached herdr client of `session` (not the
+/// server, which has no controlling terminal, and not other sessions' clients).
+pub fn client_ttys(ps: &str, session: &str) -> Vec<String> {
     let mut ttys = Vec::new();
     for line in ps.lines() {
         let mut parts = line.split_whitespace();
@@ -49,7 +82,8 @@ pub fn client_ttys(ps: &str) -> Vec<String> {
         if base != "herdr" {
             continue;
         }
-        if parts.next() == Some("server") {
+        let args: Vec<&str> = parts.collect();
+        if args.first() == Some(&"server") || client_session(&args) != session {
             continue;
         }
         let dev = format!("/dev/{tty}");
@@ -142,14 +176,16 @@ pub fn apply(st: &mut WindowState, target: Option<&str>, dry_run: bool) -> Res<V
     if !terminal_app_running(&ps) {
         return Ok(report);
     }
-    let ttys = client_ttys(&ps);
+    let session = current_session();
+    let ttys = client_ttys(&ps, &session);
 
     // Tabs whose client went away keep whatever colour they have; forget them
-    // after a best-effort restore so state never grows.
+    // after a best-effort restore so state never grows. Other sessions' tabs
+    // are theirs to manage.
     let stale: Vec<String> = st
         .original
         .keys()
-        .filter(|t| !ttys.contains(t))
+        .filter(|t| st.session.get(*t).is_none_or(|s| *s == session) && !ttys.contains(t))
         .cloned()
         .collect();
     for tty in stale {
@@ -158,6 +194,7 @@ pub fn apply(st: &mut WindowState, target: Option<&str>, dry_run: bool) -> Res<V
                 let _ = terminal_set(&tty, &orig);
             }
             st.current.remove(&tty);
+            st.session.remove(&tty);
         }
     }
 
@@ -184,6 +221,7 @@ pub fn apply(st: &mut WindowState, target: Option<&str>, dry_run: bool) -> Res<V
                 }
                 if terminal_set(tty, &triple)? {
                     st.current.insert(tty.clone(), hex.to_owned());
+                    st.session.insert(tty.clone(), session.clone());
                     report.push(format!("window {tty}: {hex}"));
                 }
             }
@@ -198,6 +236,7 @@ pub fn apply(st: &mut WindowState, target: Option<&str>, dry_run: bool) -> Res<V
                 terminal_set(tty, &orig)?;
                 st.original.remove(tty);
                 st.current.remove(tty);
+                st.session.remove(tty);
                 report.push(format!("window {tty}: restored"));
             }
         }
@@ -225,6 +264,7 @@ pub fn restore_all(st: &mut WindowState) -> Res<Vec<String>> {
     }
     st.original.clear();
     st.current.clear();
+    st.session.clear();
     Ok(report)
 }
 
@@ -239,11 +279,22 @@ ttys001  herdr
 ttys004  /opt/homebrew/bin/herdr attach
 ttys009  herdr-space-colors status
 ttys001  herdr
+ttys019  herdr --session demo
+ttys020  /opt/homebrew/bin/herdr session attach demo
+ttys021  herdr --session=other
 ";
 
     #[test]
-    fn client_ttys_skips_server_and_unrelated_binaries() {
-        assert_eq!(client_ttys(PS), vec!["/dev/ttys001", "/dev/ttys004"]);
+    fn client_ttys_skips_server_unrelated_binaries_and_other_sessions() {
+        assert_eq!(
+            client_ttys(PS, "default"),
+            vec!["/dev/ttys001", "/dev/ttys004"]
+        );
+        assert_eq!(
+            client_ttys(PS, "demo"),
+            vec!["/dev/ttys019", "/dev/ttys020"]
+        );
+        assert_eq!(client_ttys(PS, "other"), vec!["/dev/ttys021"]);
     }
 
     #[test]

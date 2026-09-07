@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.1] - 2026-09-07
+
+### Fixed
+
+- Window tint is scoped to the herdr session the hook runs under. With two
+  sessions open (for example `herdr` and `herdr --session demo`), a focus
+  change in one no longer recolours the other session's window. The session
+  of each tinted window is recorded in state so stale-window cleanup only
+  touches the caller's own windows.
+
 ## [0.3.0] - 2026-09-07
 
 ### Added
