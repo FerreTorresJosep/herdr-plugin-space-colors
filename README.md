@@ -19,10 +19,33 @@ Explicit rules pin a colour to a project; everything else is coloured
 automatically from its directory, so the same project gets the same colour on
 every machine with no setup.
 
-![Two herdr workspaces: orders-api in green and storefront in mauve. The theme, the sidebar markers, the panes and the macOS title bar all follow the focused workspace.](docs/hero.png)
+![Animated: focus moves between three herdr workspaces and the whole window — theme, sidebar dots, panes and the macOS title bar — recolours to match each one.](docs/tour.gif)
 
-*Same session, two workspaces. Left: `orders-api` focused. Right: `storefront`
-focused. Theme, sidebar dots, panes and the Terminal title bar follow along.*
+*Focus moves across three workspaces. The theme, the sidebar dots, the panes
+and the Terminal title bar all follow the focused workspace.*
+
+## Feature tour
+
+**One palette, four surfaces.** Assign a workspace a colour and it shows up in
+four places at once, so the active project is unmistakable:
+
+![Two workspaces side by side: orders-api focused in green, storefront focused in mauve.](docs/hero.png)
+
+| Surface | What changes | Mechanism |
+|---|---|---|
+| **Theme** | Accent, sidebar and active-row surfaces of the focused workspace | `[theme.custom]` rewritten on `workspace.focused`, applied live |
+| **Sidebar dots** | A coloured `●` on every agent row and Space row, in its workspace's colour | one custom `$token` per palette, reported per pane and Space |
+| **Panes** | Each pane background, agent panes included | OSC 11 from a one-line shell hook |
+| **Window** | The terminal window and its title bar | AppleScript on the Terminal tab hosting the client (macOS) |
+
+**Pin one pane or one agent to a different colour.** A single pane can carry
+its own colour, so you never confuse two agents in the same project:
+
+![A teal workspace with three panes; the middle pane is tinted red to mark it out.](docs/pane-override.png)
+
+Pin a long-running or dangerous agent with
+`herdr-space-colors set-agent <pane-id> red`: its sidebar dot and its pane both
+turn red while the rest of the workspace keeps its colour.
 
 ## Install
 
