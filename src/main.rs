@@ -597,15 +597,9 @@ fn cmd_apply(dry_run: bool) -> Res<()> {
         Pick::None => (None, "no rule, auto off"),
     };
 
-    // Same workspace, same palette, config untouched since: skip the file read.
-    if !dry_run
-        && st.last_workspace.as_deref() == Some(&ws.id)
-        && st.last_palette.as_deref() == palette_name
-    {
-        outln!("[{TAG}] {} ({}): unchanged", ws.label, palette_name.unwrap_or("none"));
-        return Ok(());
-    }
-
+    // Always reconcile against the file: cached state and config.toml can
+    // diverge (a manual edit, an external tool), and commit() is already a
+    // no-op when the bytes match.
     let path = herdr_config_path(&cfg);
     let original = fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
 

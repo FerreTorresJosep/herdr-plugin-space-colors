@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1] - 2026-09-07
+
+### Fixed
+
+- `apply` always reconciles against `config.toml` instead of trusting cached
+  state, so a `[theme.custom]` block removed by hand or by another tool is
+  restored on the next event rather than after the next workspace switch.
+
 ## [0.1.0] - 2026-09-07
 
 ### Added

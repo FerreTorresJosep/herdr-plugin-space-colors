@@ -1,6 +1,6 @@
 id = "ferretorres.space-colors"
 name = "Space Colors"
-version = "0.1.0"
+version = "0.1.1"
 min_herdr_version = "0.8.2"
 description = "Peacock-style per-workspace colours: the Herdr theme follows the focused workspace."
 platforms = ["macos", "linux"]
