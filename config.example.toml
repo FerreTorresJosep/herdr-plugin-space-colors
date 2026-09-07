@@ -29,6 +29,13 @@ marker = "●"
 # pane's background with its palette's `pane_bg` (defaults to `sidebar_bg`).
 tint = true
 
+[window]
+# Colour the terminal window (title bar included) that hosts the herdr client
+# with the focused workspace's `window_bg` (defaults to `pane_bg`). Apple
+# Terminal only for now; a silent no-op elsewhere. The original colour is
+# saved and restored on `clear`.
+tint = true
+
 # Explicit assignments — take precedence over `auto`. Match a workspace by its
 # exact `label`, or by `path` (a directory prefix, so every worktree of a
 # project shares its colour; the longest matching path wins).
@@ -50,7 +57,8 @@ tint = true
 # palette = "yellow"
 
 # Palettes. Keys are theme.custom tokens; values must be #rgb or #rrggbb.
-# `pane_bg` (optional) is the pane tint; a `light` sub-table overrides tokens
+# `pane_bg` (optional) is the pane tint, `window_bg` (optional) the window
+# tint; a `light` sub-table overrides tokens
 # when herdr runs a light theme (name contains latte/light/dawn/day/lotus/paper).
 # Allowed tokens: accent, panel_bg, sidebar_bg, active_row_bg, selection_bg,
 # surface0, surface1, surface_dim, overlay0, overlay1, text, subtext0,

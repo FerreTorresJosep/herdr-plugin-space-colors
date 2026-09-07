@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-09-07
+
+### Added
+
+- Window tint: the terminal window hosting the herdr client, title bar
+  included, takes the focused workspace's colour. Apple Terminal via
+  AppleScript on the tab whose tty runs the client; the first colour seen is
+  saved in state and restored on `clear`, on a switch to the base theme, or
+  when the client disappears. `[window] tint` toggles it; palettes accept an
+  optional `window_bg` (defaults to `pane_bg`, then `sidebar_bg`).
+- `status` reports the tinted windows.
+
 ## [0.2.0] - 2026-09-07
 
 ### Added

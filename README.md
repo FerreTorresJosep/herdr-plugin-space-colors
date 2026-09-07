@@ -11,6 +11,9 @@ workspace gets a palette, and three things follow it:
   another. One agent can be pinned to its own colour.
 - **The panes.** Each pane's background is tinted with its workspace's colour —
   agent panes included — via a one-line shell hook.
+- **The window.** The terminal window itself, title bar included, takes the
+  workspace's colour (Apple Terminal today; other emulators are
+  [help wanted](https://github.com/ferretorres/herdr-plugin-space-colors/issues/1)).
 
 Explicit rules pin a colour to a project; everything else is coloured
 automatically from its directory, so the same project gets the same colour on
@@ -64,6 +67,12 @@ colour call. Three documented mechanisms, combined, give the effect:
    runs `herdr-space-colors osc`, which prints the sequence for the calling
    pane's colour. It survives server restarts because restore recreates the
    shell.
+4. **Window tint.** The window chrome belongs to the terminal emulator, not to
+   herdr. The plugin finds the emulator tab whose tty hosts the herdr client
+   and sets its background through the emulator's own interface: AppleScript
+   on Apple Terminal, which also paints the title bar from that colour. The
+   colour seen first is saved and restored exactly on `clear`, on a switch to
+   the base theme, or when the client goes away.
 
 This means the plugin edits a file you maintain by hand. See [Safety](#safety).
 
@@ -196,8 +205,22 @@ and `~/.local/bin/herdr-space-colors`. Runtime state lives under
 - Sidebar tags are refreshed on `workspace.focused`, `workspace.created` and
   `pane.agent_status_changed` (all verified firing on herdr 0.8.2). A pane
   whose agent never changes state is still tagged on the next focus change.
+- Window tint works on Apple Terminal only for now; on other emulators it is
+  a silent no-op. macOS may ask once to allow Terminal automation. Adding
+  iTerm2, Ghostty, kitty, WezTerm and Alacritty is tracked in
+  [#1](https://github.com/ferretorres/herdr-plugin-space-colors/issues/1).
 - Built and tested on macOS with herdr 0.8.2. Linux is declared and expected
   to work; reports welcome.
+
+## Contributing
+
+Issues labelled [help wanted](https://github.com/ferretorres/herdr-plugin-space-colors/labels/help%20wanted)
+are scoped and ready to pick up: more terminal emulators (#1), prebuilt
+binaries so install needs no Rust toolchain (#2), bash/fish hooks (#3), a
+faster focus path over the socket (#4), palette actions in the herdr menu
+(#5) and Windows (#6). CI runs `cargo fmt --check`, `clippy -D warnings`
+and the unit tests on Linux and macOS; `sh tests/e2e.sh` needs a running
+herdr and checks that apply/clear leaves the config byte-identical.
 
 ## Requirements
 

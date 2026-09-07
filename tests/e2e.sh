@@ -28,6 +28,9 @@ command = "herdr-layout-cycle.cycle-layout"
 TOML
 cp "$tmp/config.toml" "$tmp/orig.toml"
 export HERDR_CONFIG_PATH="$tmp/config.toml" HERDR_PLUGIN_CONFIG_DIR="$tmp/cfg" HERDR_PLUGIN_STATE_DIR="$tmp/state"
+# The fixture must not recolour the developer's real terminal window.
+mkdir -p "$tmp/cfg"
+sed 's/^tint = true$/tint = false/' "$root/config.example.toml" > "$tmp/cfg/config.toml"
 
 step() { printf '\n== %s\n' "$*"; }
 step validate;           "$bin" validate >/dev/null

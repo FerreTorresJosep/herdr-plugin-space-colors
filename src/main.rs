@@ -33,6 +33,8 @@ use std::time::{Duration, SystemTime};
 use serde_json::Value;
 use toml_edit::{value, Array, DocumentMut, InlineTable, Item, Table, Value as TomlValue};
 
+mod window;
+
 const PLUGIN_ID: &str = "ferretorres.space-colors";
 const TAG: &str = "space-colors";
 const SOURCE: &str = "space-colors";
@@ -252,6 +254,7 @@ fn plugin_root() -> Option<PathBuf> {
 struct Palette {
     tokens: Tokens,
     pane_bg: Option<String>,
+    window_bg: Option<String>,
     light: Option<Box<Palette>>,
 }
 
@@ -284,6 +287,16 @@ impl Palette {
             .clone()
             .or_else(|| self.tokens.get("sidebar_bg").cloned())
     }
+    /// Outer terminal window colour; falls back to the pane tint so one
+    /// palette colours the whole window without extra configuration.
+    fn window_bg(&self, light: bool) -> Option<String> {
+        if light {
+            if let Some(bg) = self.light.as_ref().and_then(|l| l.window_bg.clone()) {
+                return Some(bg);
+            }
+        }
+        self.window_bg.clone().or_else(|| self.pane_bg(light))
+    }
 }
 
 #[derive(Debug)]
@@ -306,6 +319,7 @@ struct PluginConfig {
     sidebar: bool,
     marker: String,
     pane_tint: bool,
+    window_tint: bool,
     palettes: BTreeMap<String, Palette>,
     rules: Vec<Rule>,
     agents: Vec<AgentRule>,
@@ -345,16 +359,20 @@ fn parse_palette_tokens(
                     false,
                 )?));
             }
-            "pane_bg" => {
+            "pane_bg" | "window_bg" => {
                 let c = v
                     .as_str()
-                    .ok_or_else(|| format!("palettes.{name}.pane_bg must be a string"))?;
+                    .ok_or_else(|| format!("palettes.{name}.{key} must be a string"))?;
                 if !is_hex_colour(c) {
                     return Err(format!(
-                        "palettes.{name}.pane_bg = {c:?}: colours must be #rgb or #rrggbb"
+                        "palettes.{name}.{key} = {c:?}: colours must be #rgb or #rrggbb"
                     ));
                 }
-                p.pane_bg = Some(c.to_owned());
+                if key == "pane_bg" {
+                    p.pane_bg = Some(c.to_owned());
+                } else {
+                    p.window_bg = Some(c.to_owned());
+                }
             }
             token => {
                 let c = v
@@ -362,7 +380,7 @@ fn parse_palette_tokens(
                     .ok_or_else(|| format!("palettes.{name}.{token} must be a string"))?;
                 if !THEME_TOKENS.contains(&token) {
                     return Err(format!(
-                        "palettes.{name}.{token}: not a theme.custom token (allowed: {}, plus pane_bg and a light sub-table)",
+                        "palettes.{name}.{token}: not a theme.custom token (allowed: {}, plus pane_bg, window_bg and a light sub-table)",
                         THEME_TOKENS.join(", ")
                     ));
                 }
@@ -401,6 +419,12 @@ fn parse_plugin_config(text: &str) -> Res<PluginConfig> {
         .to_owned();
     let pane_tint = doc
         .get("pane")
+        .and_then(Item::as_table_like)
+        .and_then(|t| t.get("tint"))
+        .and_then(Item::as_bool)
+        .unwrap_or(true);
+    let window_tint = doc
+        .get("window")
         .and_then(Item::as_table_like)
         .and_then(|t| t.get("tint"))
         .and_then(Item::as_bool)
@@ -460,6 +484,7 @@ fn parse_plugin_config(text: &str) -> Res<PluginConfig> {
         sidebar,
         marker,
         pane_tint,
+        window_tint,
         palettes,
         rules,
         agents,
@@ -532,6 +557,7 @@ struct State {
     ws_tokens: BTreeMap<String, String>,
     last_workspace: Option<String>,
     last_palette: Option<String>,
+    window: window::WindowState,
 }
 
 fn state_path(ctx: &Ctx) -> PathBuf {
@@ -573,6 +599,10 @@ fn load_state(ctx: &Ctx) -> State {
         ws_tokens: str_map(&v["ws_tokens"]),
         last_workspace: v["last_workspace"].as_str().map(str::to_owned),
         last_palette: v["last_palette"].as_str().map(str::to_owned),
+        window: window::WindowState {
+            original: str_map(&v["window_original"]),
+            current: str_map(&v["window_current"]),
+        },
     }
 }
 
@@ -586,6 +616,8 @@ fn save_state(ctx: &Ctx, st: &State) -> Res<()> {
         "ws_tokens": st.ws_tokens,
         "last_workspace": st.last_workspace,
         "last_palette": st.last_palette,
+        "window_original": st.window.original,
+        "window_current": st.window.current,
     });
     fs::write(state_path(ctx), serde_json::to_string_pretty(&v).unwrap())
         .map_err(|e| format!("write state: {e}"))
@@ -1416,6 +1448,13 @@ fn cmd_apply(dry_run: bool) -> Res<()> {
         outln!("[{TAG}] sidebar tags: {tagged} updated");
     }
 
+    if cfg.window_tint {
+        let target = palette_name.and_then(|n| cfg.palettes[n].window_bg(light));
+        for line in window::apply(&mut st.window, target.as_deref(), dry_run)? {
+            outln!("[{TAG}] {line}");
+        }
+    }
+
     if !dry_run {
         st.managed = tokens
             .map(|t| t.keys().cloned().collect())
@@ -1467,6 +1506,10 @@ fn cmd_clear(dry_run: bool) -> Res<()> {
         return Ok(());
     }
     clear_tags(&ctx, &cfg, &st)?;
+    let mut st = st;
+    for line in window::restore_all(&mut st.window)? {
+        outln!("[{TAG}] {line}");
+    }
     save_state(&ctx, &State::default())?;
     Ok(())
 }
@@ -1518,6 +1561,21 @@ fn cmd_status() -> Res<()> {
             "on (needs the shell hook; run `shell-hook`)"
         } else {
             "off"
+        }
+    );
+    outln!(
+        "window tint:   {}",
+        if !cfg.window_tint {
+            "off".to_owned()
+        } else if st.window.current.is_empty() {
+            "on (Apple Terminal; nothing tinted right now)".to_owned()
+        } else {
+            st.window
+                .current
+                .iter()
+                .map(|(tty, hex)| format!("{tty} {hex}"))
+                .collect::<Vec<_>>()
+                .join(", ")
         }
     );
     outln!();
