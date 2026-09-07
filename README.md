@@ -1,25 +1,20 @@
 # herdr-plugin-space-colors
 
-Peacock-style per-workspace colours for [Herdr](https://herdr.dev). The theme
-follows the focused workspace, so you can tell at a glance which project you're
-in — the same idea as the VS Code Peacock extension, for your agent terminals.
+Peacock-style per-workspace colours for [Herdr](https://herdr.dev) — the same
+idea as the VS Code Peacock extension, for your agent terminals. Each
+workspace gets a palette, and three things follow it:
 
-Each workspace gets a palette: an accent plus tinted sidebar and active-row
-surfaces. Explicit rules pin a colour to a project; everything else is coloured
+- **The theme.** Accent, sidebar and active-row surfaces switch to the focused
+  workspace's colour.
+- **The sidebar.** Every agent row and every Space row carries a coloured
+  marker (`●`) in its workspace's colour, so you never mistake one agent for
+  another. One agent can be pinned to its own colour.
+- **The panes.** Each pane's background is tinted with its workspace's colour —
+  agent panes included — via a one-line shell hook.
+
+Explicit rules pin a colour to a project; everything else is coloured
 automatically from its directory, so the same project gets the same colour on
 every machine with no setup.
-
-## How it works
-
-Herdr's theme is global to a session, and its socket API has no per-workspace
-colour call. But exactly one workspace is focused at a time. On every
-`workspace.focused` event the plugin writes that workspace's palette into the
-`[theme.custom]` table of herdr's `config.toml` and runs
-`herdr server reload-config`, which herdr applies live — no restart. A global
-theme that follows focus reads as per-workspace colour.
-
-That means the plugin edits a file you maintain by hand. See [Safety](#safety)
-for exactly what it will and won't touch.
 
 ## Install
 
@@ -29,103 +24,148 @@ herdr plugin install FerreTorresJosep/herdr-plugin-space-colors
 
 The install step compiles a small Rust binary once (`cargo` must be on your
 PATH — [rustup.rs](https://rustup.rs)). After that there are no runtime
-dependencies. Switch workspaces and the colours follow.
+dependencies. Switch workspaces: the theme and the sidebar markers follow.
 
-To pin a release: `herdr plugin install FerreTorresJosep/herdr-plugin-space-colors --ref v0.1.0`.
-
-For local development:
+For the pane tint and the commands with arguments, put the tool on your PATH
+and add the shell hook:
 
 ```bash
-git clone https://github.com/FerreTorresJosep/herdr-plugin-space-colors
-herdr plugin link ./herdr-plugin-space-colors
+cd "$(herdr plugin config-dir ferretorres.space-colors)/../../github"/herdr-plugin-space-colors-*
+sh bin/herdr-space-colors install-cli          # symlinks ~/.local/bin/herdr-space-colors
+herdr-space-colors shell-hook --write          # appends a guarded 3-line hook to ~/.zshrc
 ```
+
+New panes tint themselves from then on; panes that already exist keep their
+colour until they are recreated.
+
+To pin a release: `herdr plugin install FerreTorresJosep/herdr-plugin-space-colors --ref v0.2.0`.
+For local development, clone and `herdr plugin link ./herdr-plugin-space-colors`.
+
+## How it works
+
+Herdr's theme is global to a session, and its socket API has no per-workspace
+colour call. Three documented mechanisms, combined, give the effect:
+
+1. **Theme follows focus.** Exactly one workspace is focused at a time. On
+   every `workspace.focused` event the plugin writes that workspace's palette
+   into `[theme.custom]` in herdr's `config.toml` and runs
+   `herdr server reload-config`, which herdr applies live — no restart.
+2. **Sidebar tokens.** Row styling is fixed per token position, but *which*
+   custom `$token` has a value is dynamic. The plugin writes one token per
+   palette into `ui.sidebar.agents.rows` / `ui.sidebar.spaces.rows`, each
+   styled in its palette's accent, and reports exactly the matching token on
+   every pane and Space with `herdr pane|workspace report-metadata`.
+3. **OSC 11.** Herdr honours the "set default background" sequence per pane,
+   and every pane — agent panes too — starts inside a login shell. The hook
+   runs `herdr-space-colors osc`, which prints the sequence for the calling
+   pane's colour. It survives server restarts because restore recreates the
+   shell.
+
+This means the plugin edits a file you maintain by hand. See [Safety](#safety).
 
 ## Configuration
 
-The plugin seeds its config on first run. Find it with:
-
-```bash
-herdr plugin config-dir ferretorres.space-colors
-```
+The plugin seeds its config on first run: `herdr plugin config-dir ferretorres.space-colors`.
 
 ```toml
-# Colour workspaces that match no rule by hashing their directory onto the
-# palettes. Same project → same colour, everywhere.
-auto = true
+auto = true                 # hash unmatched workspaces onto the palettes
 
-# Pin a colour. Match by exact workspace `label`, or by `path` — a directory
-# prefix, so every worktree of a project shares its colour (longest path wins).
-[[workspaces]]
-path = "~/projects/api"
+[sidebar]
+enabled = true              # manage the sidebar rows (skipped if you defined your own)
+marker = "●"
+
+[pane]
+tint = true                 # `osc` tints panes; false prints a reset instead
+
+[[workspaces]]              # pin by exact label, or by path prefix (longest wins,
+path = "~/projects/api"     # so every worktree of a project shares its colour)
 palette = "blue"
 
 [[workspaces]]
 label = "Website"
 palette = "green"
 
-# Palettes are sets of theme.custom tokens. Values must be #rgb or #rrggbb.
-[palettes.blue]
+[[agents]]                  # pin one agent by its session id (survives restarts)
+session = "e2792e1e-c279-4618-91be-69c3cfa5b447"
+palette = "yellow"
+
+[palettes.blue]             # keys are theme.custom tokens; values #rgb / #rrggbb
 accent = "#89b4fa"
 sidebar_bg = "#1f2535"
 active_row_bg = "#283248"
+# pane_bg = "#1b2030"       # optional; the pane tint defaults to sidebar_bg
+[palettes.blue.light]       # used when herdr runs a light theme
+accent = "#1e66f5"
+sidebar_bg = "#dfe6f8"
+active_row_bg = "#cddaf4"
 ```
 
-Eight palettes tuned for the default catppuccin theme ship in
+Eight palettes tuned for catppuccin (dark and latte) ship in
 [`config.example.toml`](./config.example.toml): red, peach, yellow, green,
-teal, blue, mauve, pink. Edit them freely or add your own.
+teal, blue, mauve, pink. Light variants are picked when `theme.name` contains
+`latte`, `light`, `dawn`, `day`, `lotus` or `paper`. With `theme.auto_switch`
+the host appearance is not visible to plugins, so dark palettes are used;
+`status` says so.
 
 Allowed tokens (herdr 0.8.2): `accent`, `panel_bg`, `sidebar_bg`,
 `active_row_bg`, `selection_bg`, `surface0`, `surface1`, `surface_dim`,
 `overlay0`, `overlay1`, `text`, `subtext0`, `mauve`, `green`, `yellow`, `red`,
 `blue`, `teal`, `peach`. Anything else is refused before it reaches your config.
-
-`herdr_config = "..."` overrides the path to herdr's `config.toml`;
-`$HERDR_CONFIG_PATH` always wins over both.
+Sidebar rows allow 16 tokens, so keep to 14 palettes when `sidebar.enabled`.
 
 ## Commands
 
-Registered as plugin actions:
+Plugin actions (no arguments):
 
 ```bash
-herdr plugin action invoke ferretorres.space-colors.apply    # colour the focused workspace
-herdr plugin action invoke ferretorres.space-colors.clear    # remove every key the plugin wrote
-herdr plugin action invoke ferretorres.space-colors.status   # what each workspace gets, and why
+herdr plugin action invoke ferretorres.space-colors.apply    # theme + sidebar tags for the focused workspace
+herdr plugin action invoke ferretorres.space-colors.sweep    # refresh sidebar tags only
+herdr plugin action invoke ferretorres.space-colors.clear    # remove everything the plugin wrote
+herdr plugin action invoke ferretorres.space-colors.status
 ```
 
-Or run the binary directly from the plugin directory for `--dry-run` and
-`validate`:
+CLI (after `install-cli`):
 
 ```bash
-sh bin/herdr-space-colors status
-sh bin/herdr-space-colors apply --dry-run     # prints the diff, writes nothing
-sh bin/herdr-space-colors clear --dry-run
-sh bin/herdr-space-colors validate            # checks the plugin config and exits
+herdr-space-colors set ProSeg mauve            # workspace → palette, persisted as a rule
+herdr-space-colors set ~/projects/api blue     # path rule
+herdr-space-colors unset ProSeg
+herdr-space-colors set-agent wD:p7 yellow      # one agent, by pane id or session id
+herdr-space-colors unset-agent wD:p7
+herdr-space-colors focus EduCore               # focus a workspace by label
+herdr-space-colors palettes
+herdr-space-colors status                      # every workspace and pane: palette and why
+herdr-space-colors apply --dry-run             # prints the diff, writes nothing
+herdr-space-colors clear --dry-run
+herdr-space-colors validate
+herdr-space-colors osc [--pane ID] [--reset]   # the OSC 11 sequence for a pane
 ```
 
-`apply` also runs as a startup hook, so the colour is right after a server
-restart before the first switch.
+`apply` also runs as a startup hook, and `sweep` runs on `workspace.created`
+and `pane.agent_status_changed` so new workspaces and agents are tagged
+without waiting for a focus change.
 
 ## Safety
 
-This plugin writes to your herdr `config.toml`. The contract:
+The plugin writes to your herdr `config.toml`. The contract:
 
-- **Format-preserving edits.** Uses `toml_edit`; your comments, key order and
-  formatting survive. Nothing is re-emitted from a parsed model.
-- **Only its own keys.** It writes the tokens named in the active palette under
-  `[theme.custom]`, and only ever removes keys it wrote. Your own
-  `theme.custom` entries and every other line are untouched.
-- **Strict validation first.** Tokens must be on the allowlist and colours must
-  be `#rgb`/`#rrggbb`. `herdr config check` accepts malformed colours, so the
-  plugin does this check itself.
-- **One-time backup.** Before its first edit it copies the original to
-  `config.toml.space-colors.bak` beside it, and never overwrites that file.
-- **Verify, then roll back.** After every write it runs `herdr config check`;
-  if that fails, the previous bytes are restored before anything else happens.
-- **Atomic writes.** Temp file plus rename, so a crash mid-write cannot leave a
-  half-written config.
-- **`clear` gets you back.** Removes exactly the managed keys; if the plugin
-  created `[theme.custom]` and `[theme]`, it removes those too, leaving the file
-  byte-identical to before.
+- **Format-preserving edits** via `toml_edit`; comments, key order and
+  formatting survive.
+- **Only its own keys.** Palette tokens under `[theme.custom]`, and the two
+  sidebar `rows` keys — the latter only when you have not set them yourself.
+  It only ever removes what it wrote.
+- **Strict validation first.** Token allowlist and `#rgb`/`#rrggbb` colours.
+  `herdr config check` accepts malformed colours, so the plugin checks itself.
+- **One-time backup** to `config.toml.space-colors.bak` before its first edit.
+- **Verify, then roll back.** `herdr config check` after every write; on
+  failure the previous bytes are restored and a toast tells you.
+- **Atomic writes** and a **lock** so two fast focus events cannot race.
+- **`clear` gets you back.** Removes the managed keys, the managed rows and
+  every sidebar token; a config the plugin created from scratch comes back
+  byte-identical.
+
+The shell hook is three guarded lines: it runs only inside a herdr pane
+(`HERDR_PANE_ID`), only on a terminal, and only if the CLI is installed.
 
 ## Uninstall
 
@@ -134,25 +174,30 @@ herdr plugin action invoke ferretorres.space-colors.clear
 herdr plugin uninstall ferretorres.space-colors
 ```
 
-Run `clear` first so the theme returns to your base config. The backup file is
-left in place for you to delete, as is the plugin's runtime state under
+Then remove the hook from `~/.zshrc` (marked `# herdr-space-colors shell hook`)
+and `~/.local/bin/herdr-space-colors`. Runtime state lives under
 `~/.local/state/herdr/plugins/ferretorres.space-colors/`.
 
 ## Limitations
 
-- Colours apply to herdr's own chrome — sidebar, panels, accent — not to what
-  runs inside panes.
-- One theme at a time: the focused workspace decides. Unfocused workspaces in
-  the sidebar are not individually coloured; that needs a change in herdr
-  itself.
-- On first write, `[theme.custom]` is appended at the end of `config.toml`.
+- The theme is one at a time: the focused workspace decides the chrome
+  colour. Unfocused workspaces are distinguished by their sidebar markers.
+- Sidebar row settings affect the expanded desktop sidebar only (herdr keeps
+  collapsed and mobile layouts compact).
+- Agents with a `ui.sidebar.agents.rows_by_agent` override use that override,
+  which will not carry the colour token unless you add it.
+- Pane tint needs the shell hook; a pane created before the hook keeps its
+  colour until recreated. Panes running non-zsh shells need the equivalent
+  hook in their own rc file.
+- Sidebar tags are refreshed on `workspace.focused`, `workspace.created` and
+  `pane.agent_status_changed` (all verified firing on herdr 0.8.2). A pane
+  whose agent never changes state is still tagged on the next focus change.
 - Built and tested on macOS with herdr 0.8.2. Linux is declared and expected
   to work; reports welcome.
 
 ## Requirements
 
-- Herdr ≥ 0.8.2 (`reload-config` applies the theme section live from this
-  version; earlier versions untested)
+- Herdr ≥ 0.8.2
 - `cargo` at install time
 
 ## License

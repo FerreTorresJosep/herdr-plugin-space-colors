@@ -1,12 +1,13 @@
 # herdr-space-colors — plugin configuration
 #
-# The Herdr theme follows the focused workspace. Each palette below is a set of
-# `theme.custom` tokens; whichever workspace is focused gets its palette written
-# into herdr's config.toml and the server reloads it live.
+# Each workspace gets a palette. Three things follow it:
+#   * the Herdr theme (accent + tinted sidebar / active row) — for the focused
+#     workspace, since the theme is global
+#   * a coloured marker on every agent row and Space row in the sidebar
+#   * the pane background, via the shell hook (`herdr-space-colors shell-hook`)
 #
-# Only the tokens named in a palette are ever written, and only those are
-# removed again on `clear` or when a workspace has no palette. Every other line
-# of your herdr config.toml is left exactly as it is.
+# Only the tokens named in a palette are ever written to herdr's config.toml,
+# and only those are removed again on `clear`. Everything else is left alone.
 
 # Colour workspaces that match no rule below by hashing their directory onto
 # the palettes. Same project → same colour, on every machine, with no setup.
@@ -15,6 +16,18 @@ auto = true
 # Path to herdr's config.toml. Normally not needed; the default is
 # ~/.config/herdr/config.toml, and $HERDR_CONFIG_PATH always wins.
 # herdr_config = "~/.config/herdr/config.toml"
+
+[sidebar]
+# Write `ui.sidebar.agents.rows` / `ui.sidebar.spaces.rows` with one coloured
+# token per palette. Skipped for any row set you have defined yourself.
+enabled = true
+# What the coloured token shows next to the workspace name (1–8 characters).
+marker = "●"
+
+[pane]
+# `herdr-space-colors osc` prints an OSC 11 sequence that tints the calling
+# pane's background with its palette's `pane_bg` (defaults to `sidebar_bg`).
+tint = true
 
 # Explicit assignments — take precedence over `auto`. Match a workspace by its
 # exact `label`, or by `path` (a directory prefix, so every worktree of a
@@ -28,9 +41,17 @@ auto = true
 # label = "Website"
 # palette = "green"
 
-# Palettes. Keys must be theme.custom tokens; values must be #rgb or #rrggbb.
-# These are tuned for the default catppuccin theme: a vivid accent plus two
-# tinted surfaces so the sidebar and the active row shift with the workspace.
+# Pin one agent regardless of its workspace. `session` is the agent session id
+# from `herdr agent list` (a pi session may be given by its file name).
+# `herdr-space-colors set-agent <pane-id> <palette>` writes these for you.
+#
+# [[agents]]
+# session = "e2792e1e-c279-4618-91be-69c3cfa5b447"
+# palette = "yellow"
+
+# Palettes. Keys are theme.custom tokens; values must be #rgb or #rrggbb.
+# `pane_bg` (optional) is the pane tint; a `light` sub-table overrides tokens
+# when herdr runs a light theme (name contains latte/light/dawn/day/lotus/paper).
 # Allowed tokens: accent, panel_bg, sidebar_bg, active_row_bg, selection_bg,
 # surface0, surface1, surface_dim, overlay0, overlay1, text, subtext0,
 # mauve, green, yellow, red, blue, teal, peach.
@@ -39,38 +60,70 @@ auto = true
 accent = "#f38ba8"
 sidebar_bg = "#2e1f26"
 active_row_bg = "#3f2832"
+[palettes.red.light]
+accent = "#d20f39"
+sidebar_bg = "#f2dfe3"
+active_row_bg = "#ebcdd3"
 
 [palettes.peach]
 accent = "#fab387"
 sidebar_bg = "#2c2420"
 active_row_bg = "#3d3028"
+[palettes.peach.light]
+accent = "#fe640b"
+sidebar_bg = "#f6e6dc"
+active_row_bg = "#f0d7c6"
 
 [palettes.yellow]
 accent = "#f9e2af"
 sidebar_bg = "#2c2a20"
 active_row_bg = "#3c3828"
+[palettes.yellow.light]
+accent = "#df8e1d"
+sidebar_bg = "#f5ecd8"
+active_row_bg = "#eee1c0"
 
 [palettes.green]
 accent = "#a6e3a1"
 sidebar_bg = "#202a22"
 active_row_bg = "#2a3a2c"
+[palettes.green.light]
+accent = "#40a02b"
+sidebar_bg = "#e1efdc"
+active_row_bg = "#d0e6c8"
 
 [palettes.teal]
 accent = "#94e2d5"
 sidebar_bg = "#1f2a2a"
 active_row_bg = "#283a38"
+[palettes.teal.light]
+accent = "#179299"
+sidebar_bg = "#dcecec"
+active_row_bg = "#c8e2e2"
 
 [palettes.blue]
 accent = "#89b4fa"
 sidebar_bg = "#1f2535"
 active_row_bg = "#283248"
+[palettes.blue.light]
+accent = "#1e66f5"
+sidebar_bg = "#dfe6f8"
+active_row_bg = "#cddaf4"
 
 [palettes.mauve]
 accent = "#cba6f7"
 sidebar_bg = "#282334"
 active_row_bg = "#362e48"
+[palettes.mauve.light]
+accent = "#8839ef"
+sidebar_bg = "#e9def7"
+active_row_bg = "#dccbf2"
 
 [palettes.pink]
 accent = "#f5c2e7"
 sidebar_bg = "#2d2230"
 active_row_bg = "#3d2e40"
+[palettes.pink.light]
+accent = "#ea76cb"
+sidebar_bg = "#f5e0ef"
+active_row_bg = "#eecfe4"

@@ -1,8 +1,8 @@
 id = "ferretorres.space-colors"
 name = "Space Colors"
-version = "0.1.1"
+version = "0.2.0"
 min_herdr_version = "0.8.2"
-description = "Peacock-style per-workspace colours: the Herdr theme follows the focused workspace."
+description = "Peacock-style per-workspace colours: theme, sidebar rows and panes follow each workspace."
 platforms = ["macos", "linux"]
 
 # Compile once at install time so the first workspace switch is instant. The
@@ -10,22 +10,36 @@ platforms = ["macos", "linux"]
 [[build]]
 command = ["cargo", "build", "--release", "--quiet"]
 
-# Re-apply the focused workspace's palette after the server restores its
-# session, so the colour is right before the first switch.
+# Re-apply after the server restores its session: theme for the focused
+# workspace, sidebar tags for every pane and Space.
 [[startup]]
 command = ["sh", "bin/herdr-space-colors", "apply"]
 
-# The whole mechanism: on focus, rewrite the managed theme.custom keys and
-# reload. Herdr applies the theme section live on reload-config.
+# Theme follows focus; herdr applies the theme section live on reload-config.
 [[events]]
 on = "workspace.focused"
 command = ["sh", "bin/herdr-space-colors", "apply"]
+
+# New workspaces and new/changed agents get their sidebar tag without waiting
+# for the next focus change. A sweep costs one herdr call per changed entity.
+[[events]]
+on = "workspace.created"
+command = ["sh", "bin/herdr-space-colors", "sweep"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["sh", "bin/herdr-space-colors", "sweep"]
 
 [[actions]]
 id = "apply"
 title = "Apply space colour"
 contexts = ["workspace"]
 command = ["sh", "bin/herdr-space-colors", "apply"]
+
+[[actions]]
+id = "sweep"
+title = "Refresh sidebar colour tags"
+command = ["sh", "bin/herdr-space-colors", "sweep"]
 
 [[actions]]
 id = "clear"

@@ -3,6 +3,30 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-09-07
+
+### Added
+
+- Sidebar colouring: one coloured `$sc_<palette>` token per palette in
+  `ui.sidebar.agents.rows` / `ui.sidebar.spaces.rows` (written only when the
+  user has not set their own rows), with exactly the matching token reported
+  on every pane and Space. `sweep` refreshes tags; it also runs on
+  `workspace.created` and `pane.agent_status_changed`.
+- Per-agent colour: `[[agents]]` rules keyed by agent session id;
+  `set-agent` / `unset-agent` commands.
+- Pane tint: `osc` prints an OSC 11 sequence for the calling pane; `shell-hook`
+  prints or installs a guarded `~/.zshrc` hook; `install-cli` symlinks the
+  tool into `~/.local/bin`.
+- Commands with arguments: `set`, `unset`, `focus`, `palettes`.
+- Light-theme support: `[palettes.<name>.light]` variants, chosen from
+  `theme.name`; shipped palettes carry catppuccin-latte values.
+- A write lock in the state dir, and a toast when a write is rolled back or a
+  reload fails.
+
+### Changed
+
+- `status` lists every pane with its agent, workspace, palette and why.
+
 ## [0.1.1] - 2026-09-07
 
 ### Fixed
