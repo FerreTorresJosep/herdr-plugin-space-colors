@@ -19,6 +19,11 @@ Explicit rules pin a colour to a project; everything else is coloured
 automatically from its directory, so the same project gets the same colour on
 every machine with no setup.
 
+![Two herdr workspaces: orders-api in green and storefront in mauve. The theme, the sidebar markers, the panes and the macOS title bar all follow the focused workspace.](docs/hero.png)
+
+*Same session, two workspaces. Left: `orders-api` focused. Right: `storefront`
+focused. Theme, sidebar dots, panes and the Terminal title bar follow along.*
+
 ## Install
 
 ```bash
