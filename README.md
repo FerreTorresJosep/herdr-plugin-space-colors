@@ -135,7 +135,8 @@ herdr plugin uninstall ferretorres.space-colors
 ```
 
 Run `clear` first so the theme returns to your base config. The backup file is
-left in place for you to delete.
+left in place for you to delete, as is the plugin's runtime state under
+`~/.local/state/herdr/plugins/ferretorres.space-colors/`.
 
 ## Limitations
 

@@ -96,9 +96,13 @@ fn ctx() -> Ctx {
     let config_dir = env::var_os("HERDR_PLUGIN_CONFIG_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| plugins.join("config").join(PLUGIN_ID));
+    // herdr keeps plugin state under the XDG state dir, not beside the config.
+    let state_root = env::var_os("XDG_STATE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home().join(".local/state"));
     let state_dir = env::var_os("HERDR_PLUGIN_STATE_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| plugins.join("state").join(PLUGIN_ID));
+        .unwrap_or_else(|| state_root.join("herdr/plugins").join(PLUGIN_ID));
     Ctx { herdr, config_dir, state_dir }
 }
 
@@ -643,6 +647,7 @@ fn cmd_status() -> Res<()> {
     let st = load_state(&ctx);
 
     println!("herdr config: {}", herdr_config_path(&cfg).display());
+    println!("state:        {}", state_path(&ctx).display());
     println!("managed keys: {}", if st.managed.is_empty() { "none".into() } else { st.managed.join(", ") });
     println!();
     println!("{:<4} {:<3} {:<18} {:<10} {:<14} CWD", "ID", "", "LABEL", "PALETTE", "VIA");
