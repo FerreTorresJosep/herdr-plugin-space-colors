@@ -19,7 +19,7 @@ every machine with no setup.
 ## Install
 
 ```bash
-herdr plugin install FerreTorresJosep/herdr-plugin-space-colors
+herdr plugin install ferretorres/herdr-plugin-space-colors
 ```
 
 The install step compiles a small Rust binary once (`cargo` must be on your
@@ -38,7 +38,7 @@ herdr-space-colors shell-hook --write          # appends a guarded 3-line hook t
 New panes tint themselves from then on; panes that already exist keep their
 colour until they are recreated.
 
-To pin a release: `herdr plugin install FerreTorresJosep/herdr-plugin-space-colors --ref v0.2.0`.
+To pin a release: `herdr plugin install ferretorres/herdr-plugin-space-colors --ref v0.2.0`.
 For local development, clone and `herdr plugin link ./herdr-plugin-space-colors`.
 Herdr picks up manifest *action* changes to a linked plugin immediately, but
 registers *event* subscriptions at link time — after editing `[[events]]`, run

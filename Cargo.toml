@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.82"
 description = "Peacock-style per-workspace colours for Herdr: the theme follows the focused workspace."
 license = "MIT"
-repository = "https://github.com/FerreTorresJosep/herdr-plugin-space-colors"
+repository = "https://github.com/ferretorres/herdr-plugin-space-colors"
 publish = false
 
 [[bin]]
