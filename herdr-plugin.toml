@@ -1,6 +1,6 @@
 id = "ferretorres.space-colors"
 name = "Space Colors"
-version = "0.3.2"
+version = "0.3.3"
 min_herdr_version = "0.8.2"
 description = "Peacock-style per-workspace colours: theme, sidebar rows, panes and the terminal window follow each workspace."
 platforms = ["macos", "linux"]
@@ -52,3 +52,111 @@ command = ["sh", "bin/herdr-space-colors", "clear"]
 id = "status"
 title = "Show space colour assignments"
 command = ["sh", "bin/herdr-space-colors", "status"]
+
+[[actions]]
+id = "workspace-colour-red"
+title = "Colour: Red"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "red"]
+
+[[actions]]
+id = "workspace-colour-peach"
+title = "Colour: Peach"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "peach"]
+
+[[actions]]
+id = "workspace-colour-yellow"
+title = "Colour: Yellow"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "yellow"]
+
+[[actions]]
+id = "workspace-colour-green"
+title = "Colour: Green"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "green"]
+
+[[actions]]
+id = "workspace-colour-teal"
+title = "Colour: Teal"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "teal"]
+
+[[actions]]
+id = "workspace-colour-blue"
+title = "Colour: Blue"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "blue"]
+
+[[actions]]
+id = "workspace-colour-mauve"
+title = "Colour: Mauve"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "mauve"]
+
+[[actions]]
+id = "workspace-colour-pink"
+title = "Colour: Pink"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "pink"]
+
+[[actions]]
+id = "workspace-colour-auto"
+title = "Colour: Auto (clear)"
+contexts = ["workspace"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "workspace", "auto"]
+
+[[actions]]
+id = "pane-colour-red"
+title = "Pin: Red"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "red"]
+
+[[actions]]
+id = "pane-colour-peach"
+title = "Pin: Peach"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "peach"]
+
+[[actions]]
+id = "pane-colour-yellow"
+title = "Pin: Yellow"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "yellow"]
+
+[[actions]]
+id = "pane-colour-green"
+title = "Pin: Green"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "green"]
+
+[[actions]]
+id = "pane-colour-teal"
+title = "Pin: Teal"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "teal"]
+
+[[actions]]
+id = "pane-colour-blue"
+title = "Pin: Blue"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "blue"]
+
+[[actions]]
+id = "pane-colour-mauve"
+title = "Pin: Mauve"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "mauve"]
+
+[[actions]]
+id = "pane-colour-pink"
+title = "Pin: Pink"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "pink"]
+
+[[actions]]
+id = "pane-colour-auto"
+title = "Pin: Clear"
+contexts = ["pane"]
+command = ["sh", "bin/herdr-space-colors", "action-colour", "pane", "auto"]

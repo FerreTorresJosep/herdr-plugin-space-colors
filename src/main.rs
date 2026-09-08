@@ -135,6 +135,8 @@ fn main() -> ExitCode {
         "unset" => cmd_unset(&a.positional),
         "set-agent" => cmd_set_agent(&a.positional),
         "unset-agent" => cmd_unset_agent(&a.positional),
+        "action-colour" => cmd_action_colour(&a.positional),
+        "manifest-actions" => cmd_manifest_actions(),
         "focus" => cmd_focus(&a.positional),
         "osc" => cmd_osc(a.pane.as_deref(), a.reset),
         "install-cli" => cmd_install_cli(),
@@ -1894,6 +1896,113 @@ fn cmd_unset_agent(args: &[String]) -> Res<()> {
     cmd_sweep(false)
 }
 
+/// Palette choices this plugin exposes as static right-click actions. Runtime
+/// action registration is not in plugin v1, so custom user palettes cannot
+/// appear here — the built-in eight plus `auto` cover the menu.
+const ACTION_PALETTES: &[&str] = &[
+    "red", "peach", "yellow", "green", "teal", "blue", "mauve", "pink",
+];
+
+/// Emit the `[[actions]]` entries for the palette menu, so the manifest can be
+/// regenerated from one source of truth (`ACTION_PALETTES`). Titlecased names;
+/// workspace actions set a persisted rule, pane actions pin the pane's agent.
+fn action_blocks() -> String {
+    let mut out = String::new();
+    for (scope, verb) in [("workspace", "Colour"), ("pane", "Pin")] {
+        for p in ACTION_PALETTES {
+            let title = {
+                let mut c = p.chars();
+                let first = c.next().unwrap().to_uppercase().collect::<String>();
+                format!("{first}{}", c.as_str())
+            };
+            out.push_str(&format!(
+                "\n[[actions]]\nid = \"{scope}-colour-{p}\"\ntitle = \"{verb}: {title}\"\ncontexts = [\"{scope}\"]\ncommand = [\"sh\", \"bin/herdr-space-colors\", \"action-colour\", \"{scope}\", \"{p}\"]\n"
+            ));
+        }
+        let auto_title = if scope == "workspace" {
+            "Colour: Auto (clear)"
+        } else {
+            "Pin: Clear"
+        };
+        out.push_str(&format!(
+            "\n[[actions]]\nid = \"{scope}-colour-auto\"\ntitle = \"{auto_title}\"\ncontexts = [\"{scope}\"]\ncommand = [\"sh\", \"bin/herdr-space-colors\", \"action-colour\", \"{scope}\", \"auto\"]\n"
+        ));
+    }
+    out
+}
+
+fn cmd_manifest_actions() -> Res<()> {
+    out!("{}", action_blocks());
+    Ok(())
+}
+
+/// Menu-driven colour change. Invoked by the per-palette actions herdr shows on
+/// a workspace or pane right-click; `scope` is baked into each action's command
+/// and the target id comes from the context herdr injects (HERDR_WORKSPACE_ID /
+/// HERDR_PANE_ID). `palette` is a palette name or "auto" to drop the rule.
+fn cmd_action_colour(args: &[String]) -> Res<()> {
+    let [scope, palette] = args else {
+        return Err("usage: action-colour <workspace|pane> <palette|auto>".into());
+    };
+    let auto = palette == "auto";
+    let ctx = ctx();
+    let cfg = load_plugin_config(&ctx)?;
+    if !auto && !cfg.palettes.contains_key(palette.as_str()) {
+        return Err(format!("unknown palette {palette:?}; see `palettes`"));
+    }
+    match scope.as_str() {
+        "workspace" => {
+            let id = env::var("HERDR_WORKSPACE_ID")
+                .map_err(|_| "no workspace in this context".to_string())?;
+            let label = find_workspace(&ctx, &id)?.label;
+            edit_plugin_config(&ctx, |doc| {
+                if auto {
+                    remove_rule(doc, &label);
+                } else {
+                    upsert_rule(doc, "label", &label, palette);
+                }
+                Ok(())
+            })?;
+            notify(
+                &ctx,
+                &format!("{label} \u{2192} {}", if auto { "auto" } else { palette }),
+            );
+            cmd_apply(false)
+        }
+        "pane" => {
+            let pane =
+                env::var("HERDR_PANE_ID").map_err(|_| "no pane in this context".to_string())?;
+            // A pane is pinned through its agent session; a pane with no agent
+            // has nothing to pin, so report it as a toast rather than failing
+            // the menu action.
+            let res = if auto {
+                cmd_unset_agent(std::slice::from_ref(&pane))
+            } else {
+                cmd_set_agent(&[pane.clone(), palette.clone()])
+            };
+            match res {
+                Ok(()) => {
+                    notify(
+                        &ctx,
+                        &format!(
+                            "pane {pane} \u{2192} {}",
+                            if auto { "auto" } else { palette }
+                        ),
+                    );
+                    Ok(())
+                }
+                Err(e) => {
+                    notify(&ctx, &e);
+                    Ok(())
+                }
+            }
+        }
+        other => Err(format!(
+            "unknown scope {other:?}; expected workspace or pane"
+        )),
+    }
+}
+
 fn cmd_focus(args: &[String]) -> Res<()> {
     let [target] = args else {
         return Err("usage: focus <label|id>".into());
@@ -2014,6 +2123,30 @@ fn cmd_install_cli() -> Res<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn manifest_lists_every_generated_palette_action() {
+        let manifest = include_str!("../herdr-plugin.toml");
+        for block in action_blocks()
+            .split("[[actions]]")
+            .filter(|b| b.contains("id ="))
+        {
+            let id = block
+                .lines()
+                .find_map(|l| l.trim().strip_prefix("id = \""))
+                .and_then(|l| l.strip_suffix('"'))
+                .expect("generated block has an id");
+            assert!(
+                manifest.contains(&format!("id = \"{id}\"")),
+                "manifest is missing action {id}; run `manifest-actions` and update herdr-plugin.toml"
+            );
+        }
+        // every palette gets a workspace and a pane action, plus two auto entries
+        assert_eq!(
+            action_blocks().matches("[[actions]]").count(),
+            ACTION_PALETTES.len() * 2 + 2
+        );
+    }
 
     fn tokens(pairs: &[(&str, &str)]) -> Tokens {
         pairs

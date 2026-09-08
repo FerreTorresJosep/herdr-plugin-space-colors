@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.3] - 2026-09-08
+
+### Added
+
+- Right-click palette menu. Every workspace and every pane now carries a
+  "Colour: <name>" / "Pin: <name>" action for each of the eight palettes plus
+  a clear entry, so a colour can be set from herdr's context menu without the
+  CLI. Workspace actions save the same persisted rule as `set`; pane actions
+  pin the pane's agent (a toast explains when a pane has no agent to pin).
+  Custom palettes stay CLI-only, since plugin actions are static in the
+  manifest. A `manifest-actions` subcommand regenerates the entries.
+
 ## [0.3.2] - 2026-09-08
 
 ### Added
