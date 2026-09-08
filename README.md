@@ -47,12 +47,23 @@ Pin a long-running or dangerous agent with
 `herdr-space-colors set-agent <pane-id> red`: its sidebar dot and its pane both
 turn red while the rest of the workspace keeps its colour.
 
-**Or pick from the right-click menu.** Right-click a workspace for
-**Colour: Red / Green / …** (it saves the same rule `set` would), or right-click
-a pane for **Pin: Red / …** to pin that agent. Each menu ends with a clear entry
-that returns to automatic colouring. The eight built-in palettes appear; custom
-palettes defined in your config stay CLI-only, because herdr reads a plugin's
-actions from its manifest at install time.
+**Or bind a key to a palette.** The plugin registers a `Colour: <name>` action
+per palette for workspaces and a `Pin: <name>` action per palette for panes
+(plus a clear entry each). herdr triggers plugin actions through keybindings,
+not its right-click menu, so bind the ones you use:
+
+```toml
+# ~/.config/herdr/config.toml
+[[keys.command]]
+key = "prefix+shift+r"
+type = "plugin_action"
+command = "ferretorres.space-colors.workspace-colour-red"
+description = "colour this workspace red"
+```
+
+`herdr plugin action list` shows every action id. Any action also runs from a
+shell: `herdr plugin action invoke ferretorres.space-colors.workspace-colour-red`.
+Custom palettes stay CLI-only, since plugin actions are fixed in the manifest.
 
 ## Install
 

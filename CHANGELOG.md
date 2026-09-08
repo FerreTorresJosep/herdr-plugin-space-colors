@@ -7,13 +7,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- Right-click palette menu. Every workspace and every pane now carries a
-  "Colour: <name>" / "Pin: <name>" action for each of the eight palettes plus
-  a clear entry, so a colour can be set from herdr's context menu without the
-  CLI. Workspace actions save the same persisted rule as `set`; pane actions
-  pin the pane's agent (a toast explains when a pane has no agent to pin).
-  Custom palettes stay CLI-only, since plugin actions are static in the
-  manifest. A `manifest-actions` subcommand regenerates the entries.
+- Palette actions. Every palette is registered as a `Colour: <name>` action
+  for workspaces and a `Pin: <name>` action for panes, plus a clear entry each,
+  so a colour can be bound to a key (`type = "plugin_action"`) or invoked with
+  `herdr plugin action invoke`. Workspace actions save the same persisted rule
+  as `set`; pane actions pin the pane's agent (a toast explains when a pane has
+  no agent to pin). herdr triggers plugin actions through keybindings, not its
+  right-click menu. Custom palettes stay CLI-only, since plugin actions are
+  static in the manifest. A `manifest-actions` subcommand regenerates them.
 
 ## [0.3.2] - 2026-09-08
 
