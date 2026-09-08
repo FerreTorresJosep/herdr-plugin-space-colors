@@ -253,10 +253,9 @@ and `~/.local/bin/herdr-space-colors`. Runtime state lives under
 ## Contributing
 
 Issues labelled [help wanted](https://github.com/ferretorres/herdr-plugin-space-colors/labels/help%20wanted)
-are scoped and ready to pick up: more terminal emulators (#1), prebuilt
-binaries so install needs no Rust toolchain (#2), bash/fish hooks (#3), a
-faster focus path over the socket (#4), palette actions in the herdr menu
-(#5) and Windows (#6). CI runs `cargo fmt --check`, `clippy -D warnings`
+are scoped and ready to pick up: more terminal emulators (#1), bash/fish
+hooks (#3), a faster focus path over the socket (#4), and Windows (#6).
+CI runs `cargo fmt --check`, `clippy -D warnings`
 and the unit tests on Linux and macOS; `sh tests/e2e.sh` needs a running
 herdr and checks that apply/clear leaves the config byte-identical.
 
