@@ -65,6 +65,12 @@ description = "colour this workspace red"
 shell: `herdr plugin action invoke ferretorres.space-colors.workspace-colour-red`.
 Custom palettes stay CLI-only, since plugin actions are fixed in the manifest.
 
+Showing these in herdr's right-click menu is up to herdr: it parses an action's
+`contexts` but does not yet use it. That request is tracked upstream in
+[herdrdev/herdr discussion #1722](https://github.com/herdrdev/herdr/discussions/1722);
+a 👍 there helps. Progress on this side is in
+[#5](https://github.com/ferretorres/herdr-plugin-space-colors/issues/5).
+
 ## Install
 
 ```bash
