@@ -1,14 +1,15 @@
 id = "ferretorres.space-colors"
 name = "Space Colors"
-version = "0.3.1"
+version = "0.3.2"
 min_herdr_version = "0.8.2"
 description = "Peacock-style per-workspace colours: theme, sidebar rows, panes and the terminal window follow each workspace."
 platforms = ["macos", "linux"]
 
-# Compile once at install time so the first workspace switch is instant. The
-# bin/ shim also self-builds, which is what `herdr plugin link` relies on.
+# Provision the binary once at install: build from source when cargo is
+# present, otherwise download the prebuilt release binary for this platform.
+# The bin/ shim runs the same path, which is what `herdr plugin link` relies on.
 [[build]]
-command = ["cargo", "build", "--release", "--quiet"]
+command = ["sh", "bin/herdr-space-colors", "--ensure-binary"]
 
 # Re-apply after the server restores its session: theme for the focused
 # workspace, sidebar tags for every pane and Space.

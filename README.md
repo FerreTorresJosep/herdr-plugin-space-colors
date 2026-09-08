@@ -253,7 +253,9 @@ herdr and checks that apply/clear leaves the config byte-identical.
 ## Requirements
 
 - Herdr ≥ 0.8.2
-- `cargo` at install time
+- `cargo` only if you install on a platform without a prebuilt
+  binary (macOS arm64/x86_64 and Linux x86_64/arm64 are prebuilt); otherwise
+  none
 
 ## License
 

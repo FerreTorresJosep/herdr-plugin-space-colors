@@ -1,10 +1,17 @@
 #!/bin/sh
-# Shim entrypoint. Builds the Rust binary on first use (and again whenever
-# Cargo.toml or src/ is newer than the binary, e.g. after `git pull`), then
-# execs it with the original arguments. Herdr invokes this as
-# `sh bin/herdr-space-colors <command>` with the plugin root as cwd. GitHub
-# installs also run the manifest's [[build]] step, so the first event never
-# waits on a compile there; `herdr plugin link` relies on this self-build.
+# Shim entrypoint. Ensures the Rust binary is present and current, then execs
+# it with the original arguments. Herdr invokes this as
+# `sh bin/herdr-space-colors <command>` with the plugin root as cwd.
+#
+# Two ways the binary appears:
+#   * cargo is available  -> build from source (reflects local edits; this is
+#     what `herdr plugin link` on a checkout relies on).
+#   * cargo is absent      -> download the prebuilt binary for this platform
+#     from the GitHub release matching the manifest version, and verify its
+#     SHA-256 before use. This is why installing needs no Rust toolchain.
+#
+# The manifest's [[build]] step runs `--ensure-binary`, so a fresh install
+# provisions the binary once up front and the first event never waits.
 set -eu
 
 self=$0
@@ -20,7 +27,7 @@ root=$(cd "$(dirname "$self")/.." && pwd)
 bin="$root/target/release/herdr-space-colors"
 
 # Hot path: workspace.focused fires on every workspace switch. Skip the
-# rebuild check (a find over src/) so a switch costs one exec, not a sweep.
+# freshness check (a find over src/) so a switch costs one exec, not a sweep.
 if [ "${HERDR_PLUGIN_EVENT:-}" = "workspace.focused" ] && [ -x "$bin" ]; then
   exec "$bin" "$@"
 fi
@@ -30,13 +37,92 @@ needs_build() {
   [ -n "$(find "$root/Cargo.toml" "$root/src" -newer "$bin" 2>/dev/null | head -n 1)" ]
 }
 
-if needs_build; then
-  if ! command -v cargo >/dev/null 2>&1; then
-    echo "[space-colors] cargo not found — install Rust (https://rustup.rs) so the plugin can build itself" >&2
-    exit 1
+# aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu or
+# aarch64-unknown-linux-gnu, matching the release asset names; empty when the
+# host is not a target we publish for.
+target_triple() {
+  os=$(uname -s)
+  arch=$(uname -m)
+  case "$os" in
+    Darwin) case "$arch" in
+              arm64|aarch64) echo "aarch64-apple-darwin" ;;
+              x86_64)        echo "x86_64-apple-darwin" ;;
+            esac ;;
+    Linux)  case "$arch" in
+              x86_64)        echo "x86_64-unknown-linux-gnu" ;;
+              aarch64|arm64) echo "aarch64-unknown-linux-gnu" ;;
+            esac ;;
+  esac
+}
+
+manifest_version() {
+  sed -n 's/^version *= *"\([^"]*\)".*/\1/p' "$root/herdr-plugin.toml" | head -n 1
+}
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  else
+    shasum -a 256 "$1" | cut -d' ' -f1
   fi
-  echo "[space-colors] building the plugin binary (one-off after install/update)..." >&2
-  cargo build --release --quiet --manifest-path "$root/Cargo.toml" >&2
+}
+
+download_prebuilt() {
+  triple=$(target_triple)
+  version=$(manifest_version)
+  if [ -z "$triple" ] || [ -z "$version" ]; then
+    return 1
+  fi
+  command -v curl >/dev/null 2>&1 || return 1
+
+  base="https://github.com/ferretorres/herdr-plugin-space-colors/releases/download/v${version}"
+  asset="herdr-space-colors-${triple}"
+  tmp=$(mktemp -d "${TMPDIR:-/tmp}/space-colors.XXXXXX") || return 1
+
+  echo "[space-colors] no cargo; downloading prebuilt ${asset} (v${version})..." >&2
+  if ! curl -fsSL "$base/$asset" -o "$tmp/bin" \
+       || ! curl -fsSL "$base/$asset.sha256" -o "$tmp/sum"; then
+    echo "[space-colors] download failed (no prebuilt for v${version}/${triple}?)" >&2
+    rm -rf "$tmp"
+    return 1
+  fi
+
+  want=$(cut -d' ' -f1 "$tmp/sum")
+  got=$(sha256_of "$tmp/bin")
+  if [ -z "$want" ] || [ "$want" != "$got" ]; then
+    echo "[space-colors] checksum mismatch; refusing the download" >&2
+    rm -rf "$tmp"
+    return 1
+  fi
+
+  mkdir -p "$root/target/release"
+  chmod +x "$tmp/bin"
+  mv "$tmp/bin" "$bin"
+  rm -rf "$tmp"
+  echo "[space-colors] installed prebuilt binary" >&2
+}
+
+ensure_binary() {
+  needs_build || return 0
+  if command -v cargo >/dev/null 2>&1; then
+    echo "[space-colors] building the plugin binary (one-off after install/update)..." >&2
+    cargo build --release --quiet --manifest-path "$root/Cargo.toml" >&2
+    return 0
+  fi
+  if download_prebuilt; then
+    return 0
+  fi
+  echo "[space-colors] cannot provision the binary: no cargo and no usable prebuilt." >&2
+  echo "[space-colors] install Rust (https://rustup.rs) or check the release assets." >&2
+  return 1
+}
+
+# Internal: `[[build]]` and manual provisioning call this to prepare the binary
+# without running a plugin command.
+if [ "${1:-}" = "--ensure-binary" ]; then
+  ensure_binary
+  exit $?
 fi
 
+ensure_binary
 exec "$bin" "$@"

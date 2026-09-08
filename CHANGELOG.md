@@ -3,6 +3,17 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.2] - 2026-09-08
+
+### Added
+
+- Prebuilt release binaries for macOS (arm64, x86_64) and Linux (x86_64,
+  arm64). When `cargo` is absent the shim downloads the binary matching the
+  host and the manifest version and verifies its SHA-256 before use, so
+  installing the plugin no longer requires a Rust toolchain. With `cargo`
+  present the plugin still builds from source, so `herdr plugin link` on a
+  checkout reflects local edits.
+
 ## [0.3.1] - 2026-09-07
 
 ### Fixed
