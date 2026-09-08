@@ -29,7 +29,7 @@ and the Terminal title bar all follow the focused workspace.*
 **One palette, four surfaces.** Assign a workspace a colour and it shows up in
 four places at once, so the active project is unmistakable:
 
-![Two workspaces side by side: orders-api focused in green, storefront focused in mauve.](docs/hero.png)
+![Two workspaces side by side: orders-api focused in green, storefront focused in peach.](docs/hero.png)
 
 | Surface | What changes | Mechanism |
 |---|---|---|
